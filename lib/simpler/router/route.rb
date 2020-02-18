@@ -11,8 +11,47 @@ module Simpler
         @action = action
       end
 
-      def match?(method, path)
-        @method == method && path.match(@path)
+      def match?(method, path, env)
+        @method == method && parse_path(path, env)
+      end
+
+      private
+
+      def find_id_and_action(fragment)
+        case fragment
+        when "new"
+          [nil, :new]
+        when nil
+          action = @method.get? ? :index : :create
+          [nil, action]
+        else
+          [fragment, :show]
+        end
+      end
+
+      def path_fragments
+        @fragments ||= @path.split("/").reject { |s| s.empty? }
+      end
+
+
+      def parse_path(path, env)
+        params = {}
+        router_parts = @path.split('/')
+        request_parts = path.split('/')
+
+        return false if router_parts.size != request_parts.size
+
+        router_parts.each_index do |index|
+          unless router_parts[index] == request_parts[index]
+            match_data = router_parts[index].match(/^:(.+)/)
+
+            return false if match_data.nil?
+
+            params[match_data[1].to_sym] = request_parts[index]
+          end
+        end
+
+        env['simpler.params'] = params
       end
 
     end
