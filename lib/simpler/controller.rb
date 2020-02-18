@@ -19,6 +19,9 @@ module Simpler
       send(action)
       write_response
 
+      @request.env['simpler.status'] = @response.status
+      @request.env['simpler.header'] = headers['Content-Type']
+
       @response.finish
     end
 
@@ -32,6 +35,14 @@ module Simpler
       @response['Content-Type'] = 'text/html'
     end
 
+    def status(number)
+      @response.status = number
+    end
+
+    def headers
+      @response.headers
+    end
+
     def write_response
       body = render_body
 
@@ -43,10 +54,19 @@ module Simpler
     end
 
     def params
-      @request.params
+      @request.env['simpler.params'].merge!(@request.params)
     end
 
     def render(template)
+      case template
+      when String
+        headers['Content-Type'] = 'text/html'
+      when Hash
+        if template.has_key?(:plain)
+          headers['Content-Type'] = 'text/plain'
+        end
+      end
+
       @request.env['simpler.template'] = template
     end
 
